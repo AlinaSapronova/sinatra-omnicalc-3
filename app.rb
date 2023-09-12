@@ -7,3 +7,7 @@ get("/") do
   <p>Define some routes in app.rb</p>
   "
 end
+
+get("/umbrella") do
+  erb:umbrella_form
+end
