@@ -1,6 +1,8 @@
 require "sinatra"
 require "sinatra/reloader"
 require "http"
+require "json"
+require "sinatra/cookies"
 
 
 
@@ -8,6 +10,8 @@ require "http"
 get("/") do
 erb:home
 end
+
+#####umbrella
 
 get("/umbrella") do
   erb:umbrella_form
@@ -46,16 +50,100 @@ post("/process_umbrella") do
 end
 
 
-AI_KEY = ENV.fetch("AI_KEY")
+#### single message
 
 get("/message") do
   erb:ai_message_form
 end
 
-get("/process_single_message") do
-  erb(:message_response)
+post("/process_single_message") do
+  @chat_message = params.fetch("the_message")
+  API_KEY = ENV.fetch("AI_KEY")
+
+  request_headers_hash = {
+  "Authorization" => "Bearer #{API_KEY}",
+  "content-type" => "application/json"
+}
+
+request_body_hash = {
+  "model" => "gpt-3.5-turbo",
+  "messages" => [
+    {
+      "role" => "system",
+      "content" => "You are a helpful assistant."
+    },
+    {
+      "role" => "user",
+      "content" => "#{@chat_message}"
+    }
+  ]
+}
+
+request_body_json = JSON.generate(request_body_hash)
+
+raw_response = HTTP.headers(request_headers_hash).post(
+  "https://api.openai.com/v1/chat/completions",
+  :body => request_body_json
+).to_s
+
+parsed_response = JSON.parse(raw_response)
+content = parsed_response.fetch("choices")
+text = content[0].fetch("message")
+@text_response = text.fetch("content")
+
+  erb:message_response
 end
 
+
+#### Chat GPT
 get("/chat") do
   erb:ai_chat_form
+  
+end
+
+post("/add_message_to_chat") do
+
+  @chat_message = params.fetch("user_message")
+  API_KEY = ENV.fetch("AI_KEY")
+
+  request_headers_hash = {
+  "Authorization" => "Bearer #{API_KEY}",
+  "content-type" => "application/json"
+}
+
+request_body_hash = {
+  "model" => "gpt-3.5-turbo",
+  "messages" => [
+    {
+      "role" => "system",
+      "content" => "You are a helpful assistant."
+    },
+    {
+      "role" => "user",
+      "content" => "#{@chat_message}"
+    }
+  ]
+}
+
+request_body_json = JSON.generate(request_body_hash)
+
+raw_response = HTTP.headers(request_headers_hash).post(
+  "https://api.openai.com/v1/chat/completions",
+  :body => request_body_json
+).to_s
+
+parsed_response = JSON.parse(raw_response)
+content = parsed_response.fetch("choices")
+text = content[0].fetch("message")
+@text_response = text.fetch("content")
+cookies.store(@chat_message, @text_response)
+
+erb:chat_response
+
+
+end
+
+post("/clear_chat") do
+  cookies.clear()
+  redirect "/chat" 
 end
