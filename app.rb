@@ -45,6 +45,9 @@ post("/process_umbrella") do
   erb:umbrella_response
 end
 
+
+AI_KEY = ENV.fetch("AI_KEY")
+
 get("/message") do
   erb:ai_message_form
 end
